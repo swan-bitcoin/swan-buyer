@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const fs = require('fs');
+const uuid = require('uuid').v4;
 
 const appId = process.env.APP_ID;
 const purchaseAmountUsd = process.env.AMOUNT_USD;
@@ -9,6 +10,8 @@ const purchaseAmountUsd = process.env.AMOUNT_USD;
   // Example payload to make a trading (buy Bitcoin) request
   const payload = {
     iss: appId,
+    jti: uuid(),
+    aud: 'swanbitcoin.com',
     scopes: ["write:trades"]
   }
 
