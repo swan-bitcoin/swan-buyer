@@ -9,10 +9,10 @@ const purchaseAmountUsd = process.env.AMOUNT_USD;
 (async() => {
   // Example payload to make a trading (buy Bitcoin) request
   const payload = {
-    iss: appId,
-    jti: uuid(),
-    aud: 'swanbitcoin.com',
-    scopes: ["write:trades"]
+    iss: appId, // who you claim to be
+    jti: uuid(), // unique nonce 
+    aud: 'swanbitcoin.com', // who the token is intended for
+    scopes: ["write:trades", "read:trade_quotes"] // what permissions are requested
   }
 
   // In this demo, we're reading the private key from the file system
@@ -24,7 +24,7 @@ const purchaseAmountUsd = process.env.AMOUNT_USD;
 
   // make your API request
   const url = 'https://dev-api.swanbitcoin.com/integrations/v20220222/trades/execute/market';
-  
+
   let response;
 
   try {
@@ -36,9 +36,13 @@ const purchaseAmountUsd = process.env.AMOUNT_USD;
       { headers: {'Authorization': `Bearer ${token}`}}
     );
 
-    console.log(response);
+    console.log(response.body);
   } catch (e) {
-    console.error(e);
+    if (e.response) {
+      console.log(e.response.data);
+    } else {
+      console.log(e);
+    }
   }
 
 })();
