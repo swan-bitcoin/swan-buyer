@@ -1,4 +1,9 @@
-## Try this app
+## Swan Buyer - Swan Personal Access App Demo
+
+This app uses the [Swan API](https://developers.swanbitcoin.com/) to automate a buying action from an existing dollar balance.
+It is intended as a reference implementation to help developers understand the usage of asymmetric signed JWT tokens.
+
+## Getting Started
 
 Generate your keys
 
