@@ -31,21 +31,20 @@ const createApiToken = ({ scopes }) => {
 }
 
 const makeRequest = async ({ scopes, url, params}) => {
-  // make your API request
   const token = createApiToken({scopes});
   const authorizationHeader = `Bearer ${token}`;
 
   try {
-    response = await axios.post(url, params, { headers: {'Authorization': authorizationHeader}});
+    let response = await axios.post(url, params, { headers: {'Authorization': authorizationHeader}});
 
     return response;
   } catch (e) {
     if (e.response) {
-      return e.reponse
       console.error(e, e.response.data);
+      return e.reponse
     } else {
-      return null;
       console.error(e);
+      return null;
     }
   }
 }
