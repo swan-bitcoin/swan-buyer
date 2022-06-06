@@ -40,8 +40,8 @@ const makeRequest = async ({ scopes, url, params}) => {
     return response;
   } catch (e) {
     if (e.response) {
-      console.error(e, e.response.data);
-      return e.reponse
+      console.warn(e.response.data);
+      return e.response
     } else {
       console.error(e);
       return null;
