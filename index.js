@@ -37,7 +37,7 @@ const createApiToken = async ({ scopes }) => {
     // https://developers.swanbitcoin.com/docs/personal-access/authentication#securing-private-keys
     const privateKey = fs.readFileSync("private.pem")
 
-    return jwt.sign(payload, privateKey, {algorithm: 'RS256', expiresIn: '5s'});
+    return jwt.sign(payload, privateKey, {algorithm: 'ES256', expiresIn: '5s'});
   }
 }
 
