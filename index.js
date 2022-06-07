@@ -1,12 +1,47 @@
+const AWS = require("aws-sdk");
+const kms = new AWS.KMS({
+  region: 'us-east-1'
+});
+
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const fs = require('fs');
 const uuid = require('uuid').v4;
+const base64url = require('base64url');
 
 const appId = process.env.APP_ID;
 const purchaseAmountUsd = process.env.AMOUNT_USD;
 
-const createApiToken = ({ scopes }) => {
+const key_arn = "arn:aws:kms:us-east-1:165441122072:key/6c295223-543e-4bef-99c6-b0121d99d176";
+
+const kmsSign = async(headers, payload) => {
+      payload.iat = Math.floor(Date.now() / 1000);
+      payload.exp = payload.iat + 5
+
+      let token_components = {
+          header: base64url(JSON.stringify(headers)),
+          payload: base64url(JSON.stringify(payload)),
+      };
+
+      let message = Buffer.from(token_components.header + "." + token_components.payload)
+
+      let res = await kms.sign({
+          Message: message,
+          KeyId: key_arn,
+          SigningAlgorithm: 'ECDSA_SHA_256',
+          MessageType: 'RAW'
+      }).promise()
+
+      token_components.signature = res.Signature.toString("base64")
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
+      return token_components.header + "." + token_components.payload + "." + token_components.signature;
+
+  }
+
+const createApiToken = async ({ scopes }) => {
   // Example payload to make a trading (buy Bitcoin) request
   const payload = {
     // iss: Who you claim to be. Our server will validate this using the public key you uploaded, and the private key you used to sign this message below
@@ -21,17 +56,15 @@ const createApiToken = ({ scopes }) => {
     scopes
   }
 
-  // In this demo, we're reading the private key from the file system (see README.md for how to generate this key)
-  //
-  // DO NOT DO THIS in production. Read about securing your key here:
-  // https://developers.swanbitcoin.com/docs/personal-access/authentication#securing-private-keys
-  const privateKey = fs.readFileSync("private.pem")
-
-  return jwt.sign(payload, privateKey, {algorithm: 'RS256', expiresIn: '5s'});
+  return await kmsSign(
+    {alg:'ES256', typ: 'JWT'},
+    payload
+  );
 }
 
 const makeRequest = async ({ scopes, url, params}) => {
-  const token = createApiToken({scopes});
+  const token = await createApiToken({scopes});
+console.log({token});
   const authorizationHeader = `Bearer ${token}`;
 
   try {
