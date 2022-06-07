@@ -19,9 +19,7 @@ function asn1SigSigToConcatSig(asn1SigBuffer) {
 
 const kmsSign = async({headers, payload, key_arn}) => {
     const AWS = require("aws-sdk");
-    const kms = new AWS.KMS({
-        region: 'us-east-1'
-    });
+    const kms = new AWS.KMS();
 
     payload.iat = Math.floor(Date.now() / 1000);
     payload.exp = payload.iat + 5

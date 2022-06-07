@@ -5,12 +5,13 @@ It is intended as a reference implementation to help developers understand the u
 
 ## Getting Started
 
-Generate your keys
+Generate ECDSA public/private key pair:
 
-    openssl genrsa -out private.pem 4096
-    openssl rsa -in private.pem -pubout -outform PEM -out public.pub
+    openssl ecparam -name secp256k1 -genkey -noout -out private.pem
+    openssl ec -in private.pem -pubout -out public.pem
 
-Visit your Swan Dashboard and register a new app. Copy the App ID.
+Visit your Swan Dashboard and register a new app, pasting the contents of `public.pem`.
+After saving, copy the App ID.
 
 Run this app
 
@@ -29,14 +30,62 @@ you will have to modify the URL string in the code to point to api.swanbitcoin.c
 For production, we can generate a KMS key, so that you will never see the contents of the private key.
 It will live in a secure enclave in AWS hardware.
 
-1. Create KMS key in AWS, choosing Asymmetric and "Sign and verify" options
-2. Select ECC_SECG_P256K1 option
-3. Copy the public key and submit it to the swan developer area at https://app.dev.swanbitcoin.com
-4. Note your appId
-5. Note the AWS KMS key arn
 
-Run the command as follows, pointing to your key:
+Create asymmetric signing KMS key in AWS:
+```
+aws kms create-key --key-spec "ECC_SECG_P256K1" --key-usage "SIGN_VERIFY"
+```
 
-    KMS_KEY_ARN=arn:aws:kms:us-east-1:[youraccount]:key/ AMOUNT_USD=100 APP_ID=[yourappid] yarn start
+Output looks like this. Grab the KeyId, and the Arn for the next step:
+```
+{
+    "KeyMetadata": {
+        "AWSAccountId": "...",
+        "KeyId": "92eb803b-0552-44f7-8ab8-8f3b746c5f1b",
+        "Arn": "arn:aws:kms:us-east-1:123412341234:key/92eb803b-0552-44f7-8ab8-8f3b746c5f1b",
+        …
+        "CustomerMasterKeySpec": "ECC_SECG_P256K1",
+        "KeySpec": "ECC_SECG_P256K1",
+        "SigningAlgorithms": [
+            "ECDSA_SHA_256"
+        ],
+        "MultiRegion": false
+    }
+}
+```
+
+Get the public key:
+```
+aws kms get-public-key --key-id 92eb803b-0552-44f7-8ab8-8f3b746c5f1b
+```
+
+Output looks like this:
+```
+{
+    "KeyId": "arn:aws:kms:us-east-1:165441122072:key/1e5ad73d-57ff-4654-8434-4f800709e3bc",
+    "PublicKey": "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEz3Yw+GVst7KCfJjYrMiDFEuw9ZaYxE1ZMfRk1Fq4OUQPpqsRM1bN8YdoX40ejUcTErfw06Moe5v/8H6MjpzVdA==",
+    "CustomerMasterKeySpec": "ECC_SECG_P256K1",
+    "KeySpec": "ECC_SECG_P256K1",
+    "KeyUsage": "SIGN_VERIFY",
+    "SigningAlgorithms": [
+        "ECDSA_SHA_256"
+    ]
+}
+```
+
+Grab the `PublicKey` from the output and upload it on the swan developer page.
+NOTE: You must add the BEGIN/END wrapper lines around your key for it to work properly:
+
+Example:
+```
+-----BEGIN PUBLIC KEY-----
+MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAES2fmbcaOgPzmHlWVgPC6+I1pETB4SF+Z
+ksLQPC/8PMJCVOLQbXWjVkCY0CzY6rTL3e1V2uEzouskCToOq9OykA==
+-----END PUBLIC KEY-----
+```
+
+Run the command as follows, pointing to your key Arn:
+
+    KMS_KEY_ARN=[Arn from above] AMOUNT_USD=100 APP_ID=[yourappid] yarn start
 
 
