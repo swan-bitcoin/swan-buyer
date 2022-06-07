@@ -1,20 +1,14 @@
-const AWS = require("aws-sdk");
-const kms = new AWS.KMS({
-  region: 'us-east-1'
-});
-
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const fs = require('fs');
 const uuid = require('uuid').v4;
-const base64url = require('base64url');
 
 const appId = process.env.APP_ID;
 const purchaseAmountUsd = process.env.AMOUNT_USD;
 
 const { kmsSign } = require('./kms');
 
-const key_arn = "arn:aws:kms:us-east-1:165441122072:key/6c295223-543e-4bef-99c6-b0121d99d176";
+const key_arn = process.env.KMS_KEY_ARN
 
 const createApiToken = async ({ scopes }) => {
   // Example payload to make a trading (buy Bitcoin) request
