@@ -32,6 +32,13 @@ const kmsSign = async(headers, payload) => {
           MessageType: 'RAW'
       }).promise()
 
+console.log({sig: res.Signature.toString("base64")});
+
+let buff = new Buffer(res.Signature.toString('base64'), 'base64');
+let text = buff.toString('ascii');
+console.log({text});
+console.log({len: text.length});
+
       token_components.signature = res.Signature.toString("base64")
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
@@ -57,14 +64,23 @@ const createApiToken = async ({ scopes }) => {
   }
 
   return await kmsSign(
-    {alg:'ES256', typ: 'JWT'},
+    {alg: 'ES256', typ: 'JWT'},
     payload
   );
 }
 
 const makeRequest = async ({ scopes, url, params}) => {
   const token = await createApiToken({scopes});
+
 console.log({token});
+console.log({decoded: jwt.decode(token)});
+
+// Bug right here - KMS is giving us a 71 byte signature instead of 64 bytes
+console.log({verified: jwt.verify(token, `-----BEGIN PUBLIC KEY-----
+MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE924UHsh62Rx6Ddk8/926U+OMMAGxoVs/
+M/zbYMeBb61mlPpceoXEgX9cpaXr9iUawiD4oLXDvHdKU6nEOwP+JQ==
+-----END PUBLIC KEY-----`)});
+
   const authorizationHeader = `Bearer ${token}`;
 
   try {
