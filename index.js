@@ -14,6 +14,24 @@ const purchaseAmountUsd = process.env.AMOUNT_USD;
 
 const key_arn = "arn:aws:kms:us-east-1:165441122072:key/6c295223-543e-4bef-99c6-b0121d99d176";
 
+const asn1 = require('asn1.js');
+
+const EcdsaDerSig = asn1.define('ECPrivateKey', function() {
+    return this.seq().obj(
+        this.key('r').int(),
+        this.key('s').int()
+    );
+});
+
+function asn1SigSigToConcatSig(asn1SigBuffer) {
+    const rsSig = EcdsaDerSig.decode(asn1SigBuffer, 'der');
+    return Buffer.concat([
+        rsSig.r.toArrayLike(Buffer, 'be', 32),
+        rsSig.s.toArrayLike(Buffer, 'be', 32)
+    ]);
+}
+
+
 const kmsSign = async(headers, payload) => {
       payload.iat = Math.floor(Date.now() / 1000);
       payload.exp = payload.iat + 5
@@ -32,14 +50,12 @@ const kmsSign = async(headers, payload) => {
           MessageType: 'RAW'
       }).promise()
 
-console.log({sig: res.Signature.toString("base64")});
+      let buff = new Buffer(res.Signature.toString('base64'), 'base64');
 
-let buff = new Buffer(res.Signature.toString('base64'), 'base64');
-let text = buff.toString('ascii');
-console.log({text});
-console.log({len: text.length});
+      // KMS returns keys in asn1 format. We need to convert them to make the server happy
+      const concatSig = asn1SigSigToConcatSig(buff);
 
-      token_components.signature = res.Signature.toString("base64")
+      token_components.signature = concatSig.toString("base64")
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=/g, '');
