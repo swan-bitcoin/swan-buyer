@@ -26,7 +26,19 @@ const createApiToken = async ({ scopes }) => {
   }
 
   const headers = {alg: 'ES256', typ: 'JWT'};
-  return kmsSign({headers, payload, key_arn});
+
+  if (key_arn) {
+    //production-like demo: using KMS as our HSM
+    return kmsSign({headers, payload, key_arn});
+  } else {
+    // In this demo, we're reading the private key from the file system (see README.md for how to generate this key)
+    //
+    // DO NOT DO THIS in production. Read about securing your key here:
+    // https://developers.swanbitcoin.com/docs/personal-access/authentication#securing-private-keys
+    const privateKey = fs.readFileSync("private.pem")
+
+    return jwt.sign(payload, privateKey, {algorithm: 'RS256', expiresIn: '5s'});
+  }
 }
 
 const makeRequest = async ({ scopes, url, params}) => {

@@ -1,56 +1,56 @@
 const base64url = require('base64url');
-const AWS = require("aws-sdk");
-const kms = new AWS.KMS({
-  region: 'us-east-1'
-});
-
 const asn1 = require('asn1.js');
 
 const EcdsaDerSig = asn1.define('ECPrivateKey', function() {
-  return this.seq().obj(
-    this.key('r').int(),
-    this.key('s').int()
-  );
+    return this.seq().obj(
+        this.key('r').int(),
+        this.key('s').int()
+    );
 });
 
 function asn1SigSigToConcatSig(asn1SigBuffer) {
-  const rsSig = EcdsaDerSig.decode(asn1SigBuffer, 'der');
-  return Buffer.concat([
-    rsSig.r.toArrayLike(Buffer, 'be', 32),
-    rsSig.s.toArrayLike(Buffer, 'be', 32)
-  ]);
+    const rsSig = EcdsaDerSig.decode(asn1SigBuffer, 'der');
+    return Buffer.concat([
+        rsSig.r.toArrayLike(Buffer, 'be', 32),
+        rsSig.s.toArrayLike(Buffer, 'be', 32)
+    ]);
 }
 
 
 const kmsSign = async({headers, payload, key_arn}) => {
-  payload.iat = Math.floor(Date.now() / 1000);
-  payload.exp = payload.iat + 5
+    const AWS = require("aws-sdk");
+    const kms = new AWS.KMS({
+        region: 'us-east-1'
+    });
 
-  let token_components = {
-    header: base64url(JSON.stringify(headers)),
-    payload: base64url(JSON.stringify(payload)),
-  };
+    payload.iat = Math.floor(Date.now() / 1000);
+    payload.exp = payload.iat + 5
 
-  let message = Buffer.from(token_components.header + "." + token_components.payload)
+    let token_components = {
+        header: base64url(JSON.stringify(headers)),
+        payload: base64url(JSON.stringify(payload)),
+    };
 
-  let res = await kms.sign({
-    Message: message,
-    KeyId: key_arn,
-    SigningAlgorithm: 'ECDSA_SHA_256',
-    MessageType: 'RAW'
-  }).promise()
+    let message = Buffer.from(token_components.header + "." + token_components.payload)
 
-  let buff = new Buffer(res.Signature.toString('base64'), 'base64');
+    let res = await kms.sign({
+        Message: message,
+        KeyId: key_arn,
+        SigningAlgorithm: 'ECDSA_SHA_256',
+        MessageType: 'RAW'
+    }).promise()
 
-  // KMS returns keys in asn1 format. We need to convert them to make the server happy
-  const concatSig = asn1SigSigToConcatSig(buff);
+    let buff = new Buffer(res.Signature.toString('base64'), 'base64');
 
-  token_components.signature = concatSig.toString("base64")
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
+    // KMS returns keys in asn1 format. We need to convert them to make the server happy
+    const concatSig = asn1SigSigToConcatSig(buff);
 
-  return token_components.header + "." + token_components.payload + "." + token_components.signature;
+    token_components.signature = concatSig.toString("base64")
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+
+    return token_components.header + "." + token_components.payload + "." + token_components.signature;
 }
 
 module.exports = { kmsSign }
